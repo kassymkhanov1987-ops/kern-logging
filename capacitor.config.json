@@ -1,0 +1,8 @@
+{
+  "appId": "com.kernlogging.app",
+  "appName": "Описание керна",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "Описание керна",
+  "short_name": "Керн",
+  "description": "Документация керна скважин: описание, пробы, анализы, колонки и разрезы. Работает без интернета.",
+  "lang": "ru",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F3F4F1",
+  "theme_color": "#1F4E5F",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "name": "kern-logging",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Описание керна — офлайн-приложение геолога для документации керна скважин",
+  "scripts": {
+    "build": "python3 build.py",
+    "android": "python3 build.py && npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "latest",
+    "@capacitor/core": "latest",
+    "@capacitor/filesystem": "latest",
+    "@capacitor/share": "latest"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "latest"
+  }
+}
