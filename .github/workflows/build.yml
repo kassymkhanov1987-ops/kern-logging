@@ -1,6 +1,7 @@
 # Сборка при каждом изменении в ветке main:
 #   web — публикация веб-версии на GitHub Pages (ставится на Android из Chrome);
-#   apk — сборка APK-файла из того же кода (Capacitor), скачивается из раздела Actions.
+#   apk — сборка APK из того же кода (Capacitor) и публикация в релизе «apk»:
+#         https://github.com/<владелец>/<репозиторий>/releases/download/apk/kern-logging.apk
 name: Сборка
 
 on:
@@ -8,14 +9,13 @@ on:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 jobs:
   web:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}
@@ -32,6 +32,8 @@ jobs:
 
   apk:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -50,12 +52,38 @@ jobs:
       - name: Разрешение на камеру (фото керна)
         run: |
           sed -i 's#<uses-permission android:name="android.permission.INTERNET" />#<uses-permission android:name="android.permission.INTERNET" />\n    <uses-permission android:name="android.permission.CAMERA" />#' android/app/src/main/AndroidManifest.xml
-          grep -n "permission" android/app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.CAMERA' android/app/src/main/AndroidManifest.xml
+      - name: Номер версии
+        run: |
+          sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
+          grep -E "versionCode|versionName" android/app/build.gradle
+      - name: Иконка приложения
+        continue-on-error: true
+        run: npx --yes @capacitor/assets generate --android --iconBackgroundColor '#1F4E5F' --iconBackgroundColorDark '#1F4E5F'
       - name: Копирование веб-версии в Android-проект
         run: npx cap sync android
+      - name: Постоянный ключ подписи (обновления ставятся поверх, данные сохраняются)
+        run: mkdir -p ~/.android && cp android-keys/debug.keystore ~/.android/debug.keystore
       - name: Сборка APK
         run: cd android && ./gradlew assembleDebug --no-daemon
+      - name: Проверка APK
+        run: |
+          APK=android/app/build/outputs/apk/debug/app-debug.apk
+          AAPT=$(ls -d $ANDROID_HOME/build-tools/*/ | sort -V | tail -1)aapt
+          $AAPT dump badging $APK | grep -E "package:|application-label|uses-permission"
+          $AAPT dump permissions $APK | grep -q android.permission.CAMERA
+          unzip -l $APK | grep -q assets/public/index.html
+          unzip -l $APK | grep -q assets/public/js/app.js
+          cp $APK kern-logging.apk
       - uses: actions/upload-artifact@v4
         with:
           name: kern-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: kern-logging.apk
+      - name: Публикация APK для скачивания с телефона
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NOTES="Сборка №${{ github.run_number }} от $(date -u +'%d.%m.%Y %H:%M') UTC, коммит ${GITHUB_SHA::7}. Установка: скачать kern-logging.apk на телефон и открыть. Обновление ставится поверх, данные сохраняются."
+          gh release view apk >/dev/null 2>&1 || gh release create apk --title "Описание керна — APK" --notes "$NOTES"
+          gh release upload apk kern-logging.apk --clobber
+          gh release edit apk --notes "$NOTES"
